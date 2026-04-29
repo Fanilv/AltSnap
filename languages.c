@@ -66,7 +66,7 @@ static void LoadTranslationOrTT(const TCHAR *__restrict__ ini, const TCHAR * __r
 {
     // if english is not seleced then we have to allocate l10_ini strings struct
     // and we have to read the ini file...
-    size_t i;
+    //RGTICTAC tt; RGTic(&tt);
     DWORD ret;
     DWORD tsectionlen=16383;
     TCHAR *tsection = NULL;
@@ -84,11 +84,15 @@ static void LoadTranslationOrTT(const TCHAR *__restrict__ ini, const TCHAR * __r
     if(!l10n_ini) { l10n_ini = (struct strings *)calloc(1, sizeof(struct strings)); }
     if(!l10n_ini) return; // Unable to allocate mem
 
-    for (i=0; i < ARR_SZ(l10n_inimapping); i++) {
+    TCHAR const *ini_map[ARR_SZ(l10n_inimapping)];
+    RGIniMapSection(tsection, ini_map, l10n_inimapping, ARR_SZ(l10n_inimapping));
+
+    for (size_t i=0; i < ARR_SZ(l10n_inimapping); i++) {
         // Get pointer to default English string to be used if ini entry doesn't exist
-        const TCHAR *const def = ((TCHAR **)&en_US)[i*2+offset];
-        const TCHAR *txt = GetSectionOptionCStr(tsection, l10n_inimapping[i], def);
-        if(!txt) continue;
+        const TCHAR *const def_val = ((TCHAR **)&en_US)[i*2+offset];
+        const TCHAR *txt = ini_map[i] ? ini_map[i] : def_val;
+        if (!txt)
+            continue; // default value may be NULL...
 
         TCHAR buf[128];
         TCHAR **deststr = &((TCHAR **)l10n_ini)[i*2+offset];
@@ -105,6 +109,7 @@ static void LoadTranslationOrTT(const TCHAR *__restrict__ ini, const TCHAR * __r
     }
     l10n = l10n_ini;
     free(tsection); // free the cached Translation section.
+    //LOGA("LoadTranslationOrTT in %u us", (unsigned)RGTac(&tt));
 }
 
 static void LoadTranslation(const TCHAR *__restrict__ ini)

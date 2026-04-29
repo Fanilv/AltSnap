@@ -1777,6 +1777,24 @@ static int GetSectionOptionInt(const TCHAR *section, const char * const oname, c
     return def;
 }
 
+/* MAP Ini file section to a table of strings
+ * TODO: use hash map instead of linear search */
+static void RGIniMapSection(const TCHAR *section, /*OUT*/ TCHAR const **map, char const * const * const ini_mapping, size_t maplen)
+{
+    char key[64];
+    mem00(map, sizeof(*map) * maplen); /* Always zero out */
+    for (const TCHAR *p = section; *p; p += lstrlen(p) + 1) {
+        char *pk = key;
+        while(*p && *p != TEXT('=') && pk < key + 63) *pk++ = *p++; /* Copy key to char, stop at '=' sign */
+        *pk = '\0'; p++;
+        //* GetIniMapping_Index(key, ini_mapping, maplen); */
+        for (size_t i = 0; i < maplen; i++) {
+            if ( !lstrcmpiA(key, ini_mapping[i]) )
+                map[i] = p;
+        }
+    }
+}
+
 /* Simple function to append to a simple list */
 struct my_simple_list_ { void *buf; size_t count; size_t cap; };
 static void* ListAppend(void *list_p, void *elem, size_t elemsize)
