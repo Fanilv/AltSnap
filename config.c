@@ -133,8 +133,7 @@ static void OpenConfig(int startpage)
     };
     PROPSHEETPAGE psp[ARR_SZ(pages)];
     mem00(&psp[0], sizeof(psp));
-    size_t i;
-    for (i = 0; i < ARR_SZ(pages); i++) {
+    for (size_t i = 0; i < ARR_SZ(pages); i++) {
         psp[i].dwSize = sizeof(*psp);
         psp[i].hInstance = g_hinst;
         psp[i].pszTemplate = MAKEINTRESOURCE(pages[i].pszTemplate);
@@ -192,8 +191,7 @@ static void UpdateStrings()
     titles[3] = l10n->ConfigTabBlacklist;
     titles[4] = l10n->ConfigTabAdvanced;
     titles[5] = l10n->ConfigTabAbout;
-    size_t i;
-    for (i = 0; i < ARR_SZ(titles); i++) {
+    for (size_t i = 0; i < ARR_SZ(titles); i++) {
         TCITEM ti;
         ti.mask = TCIF_TEXT;
         ti.pszText = (TCHAR *)titles[i];
@@ -431,11 +429,10 @@ static HWND CreateInfoTip(HWND hDlg, int toolID, const TCHAR * const pszText)
 
     return hwndTip;
 }
-struct dialogstring { short idc; short l10nidx; /* const TCHAR *const helpstr; */ };
-static void UpdateDialogStrings(HWND hwnd, const struct dialogstring * const strlst, unsigned size)
+typedef struct dialogstring { short idc; short l10nidx; /* const TCHAR *const helpstr; */ } dialogstring_t;
+static void UpdateDialogStrings(HWND hwnd, const dialogstring_t * const strlst, size_t size)
 {
-    unsigned i;
-    for (i=0; i < size; i++) {
+    for (size_t i=0; i < size; i++) {
         SetDlgItemText(hwnd, strlst[i].idc, L10NSTR(strlst[i].l10nidx));
         CreateInfoTip(hwnd, strlst[i].idc, L10NSTR(strlst[i].l10nidx + 1));
     }
@@ -450,10 +447,9 @@ typedef struct optlst {
     char *name;
     void *def;
 } optlst_t;
-static void ReadDialogOptions(HWND hwnd,const optlst_t *ol, unsigned size)
+static void ReadDialogOptions(HWND hwnd,const optlst_t *ol, size_t size)
 {
-    unsigned i;
-    for (i=0; i < size; i++) {
+    for (size_t i=0; i < size; i++) {
         if (ol[i].type == T_BOL)
             ReadOptionIntW(hwnd, ol[i].idc, ol[i].section, ol[i].name, (int)(DorQWORD)ol[i].def, -1);
         else if (ol[i].type == T_BMK)
@@ -462,10 +458,9 @@ static void ReadDialogOptions(HWND hwnd,const optlst_t *ol, unsigned size)
             ReadOptionStrW(hwnd, ol[i].idc, ol[i].section, ol[i].name, (TCHAR*)ol[i].def);
     }
 }
-static void WriteDialogOptions(HWND hwnd,const optlst_t *ol, unsigned size)
+static void WriteDialogOptions(HWND hwnd,const optlst_t *ol, size_t size)
 {
-    unsigned i;
-    for (i=0; i < size; i++) {
+    for (size_t i=0; i < size; i++) {
         if (ol[i].type == T_BOL)
             WriteOptionBoolW(hwnd, ol[i].idc, ol[i].section, ol[i].name);
         else if(ol[i].type == T_BMK)
@@ -489,16 +484,15 @@ static BOOL CALLBACK RefreshTestWin(HWND hwnd, LPARAM lp)
     return TRUE;
 }
 
-static int FindIDCStrIDX(const struct dialogstring sl[], size_t len, int idc)
+static int FindIDCStrIDX(const dialogstring_t sl[], size_t len, int idc)
 {
-    size_t i;
-    for (i=0; i<len; i++) {
+    for (size_t i=0; i<len; i++) {
         if (idc == (int)sl[i].idc)
             return sl[i].l10nidx;
     }
     return -1;
 }
-static void ShowContextHelp(const struct dialogstring sl[], size_t len, HWND hwnd, LPHELPINFO hi)
+static void ShowContextHelp(const dialogstring_t sl[], size_t len, HWND hwnd, LPHELPINFO hi)
 {
     if (hi->iContextType == HELPINFO_WINDOW) {
         int id = FindIDCStrIDX(sl, len, hi->iCtrlId);
@@ -528,7 +522,7 @@ static INT_PTR CALLBACK GeneralPageDialogProc(HWND hwnd, UINT msg, WPARAM wParam
     };
     #undef V
 
-    static const struct dialogstring strlst[] = {
+    static const dialogstring_t strlst[] = {
         { IDC_GENERAL_BOX,      L10NIDX(GeneralBox) },
         { IDC_AUTOFOCUS,        L10NIDX(GeneralAutoFocus) },
         { IDC_AERO,             L10NIDX(GeneralAero) },
@@ -567,9 +561,9 @@ static INT_PTR CALLBACK GeneralPageDialogProc(HWND hwnd, UINT msg, WPARAM wParam
         HWND control = GetDlgItem(hwnd, IDC_LANGUAGE);
         CB_ResetContent(control);
         EnableWindow(control, TRUE);
-        int i;
+
         if (langinfo) {
-            for (i = 0; i < nlanguages; i++) {
+            for (int i = 0; i < nlanguages; i++) {
                 CB_AddString(control, langinfo[i].lang);
                 if ( !lstrcmpi(l10n->Code, langinfo[i].code) ) {
                     CB_SetCurSel(control, i);
@@ -744,8 +738,7 @@ static void SaveHotKeys(const struct hk_struct *const hotkeys, HWND hwnd, const 
     TCHAR keys[32];
     // Get the current config in case there are some user added keys.
     GetPrivateProfileString(TEXT("Input"), name, TEXT(""), keys, ARR_SZ(keys), inipath);
-    unsigned i;
-    for (i = 0; hotkeys[i].control; i++) {
+    for (size_t i = 0; hotkeys[i].control; i++) {
          if (IsChecked(hotkeys[i].control)) {
              AddvKeytoList(keys, hotkeys[i].vkey);
          } else {
@@ -758,7 +751,6 @@ static void SaveHotKeys(const struct hk_struct *const hotkeys, HWND hwnd, const 
 static void CheckConfigHotKeys(const struct hk_struct *hotkeys, HWND hwnd, const TCHAR *hotkeystr, const TCHAR* def)
 {
     // Hotkeys
-    size_t i;
     unsigned temp;
     TCHAR txt[32];
     GetPrivateProfileString(TEXT("Input"), hotkeystr, def, txt, ARR_SZ(txt), inipath);
@@ -769,7 +761,7 @@ static void CheckConfigHotKeys(const struct hk_struct *hotkeys, HWND hwnd, const
         while(*pos == ' ') pos++;
 
         // What key was that?
-        for (i = 0; hotkeys[i].control ; i++) {
+        for (size_t i = 0; hotkeys[i].control ; i++) {
             if (temp == hotkeys[i].vkey) {
                 CheckDlgButton(hwnd, hotkeys[i].control, BST_CHECKED);
                 break;
@@ -1016,7 +1008,7 @@ static INT_PTR CALLBACK MousePageDialogProc(HWND hwnd, UINT msg, WPARAM wParam, 
             }
 
             // Update text
-            static const struct dialogstring strlst[] = {
+            static const dialogstring_t strlst[] = {
                 { IDC_MOUSE_BOX,       L10NIDX(InputMouseBox ) },
                 { IDC_MBA1,            L10NIDX(InputMouseBtAc1 ) },
                 { IDC_MBA2,            L10NIDX(InputMouseBtAc2 ) },
@@ -1544,7 +1536,7 @@ static INT_PTR CALLBACK KeyboardPageDialogProc(HWND hwnd, UINT msg, WPARAM wPara
             CB_SetCurSel(control, sel); // select current ModKey
 
             // Update text
-            static const struct dialogstring strlst[] = {
+            static const dialogstring_t strlst[] = {
                 { IDC_KEYBOARD_BOX,    L10NIDX(ConfigTabKeyboard) },
                 { IDC_SCROLLLOCKSTATE, L10NIDX(InputScrollLockState) },
                 { IDC_UNIKEYHOLDMENU,  L10NIDX(InputUniKeyHoldMenu) },
@@ -1654,7 +1646,7 @@ static INT_PTR CALLBACK BlacklistPageDialogProc(HWND hwnd, UINT msg, WPARAM wPar
         LPNMHDR pnmh = (LPNMHDR) lParam;
         if (pnmh->code == PSN_SETACTIVE) {
             // Update text
-            static const struct dialogstring strlst[] = {
+            static const dialogstring_t strlst[] = {
                 { IDC_BLACKLIST_BOX          , L10NIDX(BlacklistBox ) },
                 { IDC_PROCESSBLACKLIST_HEADER, L10NIDX(BlacklistProcessBlacklist ) },
                 { IDC_BLACKLIST_HEADER       , L10NIDX(BlacklistBlacklist ) },
@@ -1664,7 +1656,7 @@ static INT_PTR CALLBACK BlacklistPageDialogProc(HWND hwnd, UINT msg, WPARAM wPar
                 { IDC_FINDWINDOW_BOX         , L10NIDX(BlacklistFindWindowBox ) }
             };
             UpdateDialogStrings(hwnd, strlst, ARR_SZ(strlst));
-            for(size_t i = 0; i < ARR_SZ(optlst); i++)
+            for (size_t i = 0; i < ARR_SZ(optlst); i++)
                 CreateInfoTip(hwnd, optlst[i].idc, l10n->BlacklistFormat);
 
             // Enable or disable buttons if needed
@@ -2010,6 +2002,7 @@ static LRESULT CALLBACK TestWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
         const int sheight = height*sidefrac/100;
         const int kwidth = max(cwidth, swidth);
         const int kheight = max(cheight, sheight);
+        static const DWORD ptsslens[8] = { 2,2,2,2,2,2,2,2 };
         POINT ptss[16]={// Left
                         { 0,                (height-sheight)/2 },
                         { (width-kwidth)/2, (height-sheight)/2 },
@@ -2032,10 +2025,7 @@ static LRESULT CALLBACK TestWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
                         { (width+swidth)/2, height             },
                       };
         OffsetPoints(ptss, Offset.x, Offset.y, 16);
-        int j;
-        for (j=0; j < 16; j+=2) {
-            Polyline(hdc, &ptss[j], 2);
-        }
+        PolyPolyline(hdc, ptss, ptsslens, 8);
         if (centerfrac < sidefrac) {
             // We must draw 4 extra diagonal lines.
             POINT pts[8]={ // Top-Left
@@ -2052,9 +2042,7 @@ static LRESULT CALLBACK TestWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
                           { (width+cwidth)/2, (height+cheight)/2 },
                          };
             OffsetPoints(pts, Offset.x, Offset.y, 16);
-            for (j=0; j < 8; j+=2) {
-                Polyline(hdc, &pts[j], 2);
-            }
+            PolyPolyline(hdc, pts, ptsslens, ARR_SZ(pts) / 2);
         }
 
         if (centermode == 3) { // Closest side mode
@@ -2065,8 +2053,7 @@ static LRESULT CALLBACK TestWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
                             { (width+cwidth)/2, (height-cheight)/2 },
                           };
             OffsetPoints(pts, Offset.x, Offset.y, 4);
-            Polyline(hdc, pts  , 2);
-            Polyline(hdc, pts+2, 2);
+            PolyPolyline(hdc, pts, ptsslens, ARR_SZ(pts) / 2);
 
             HPEN dotpen = (HPEN)CreatePen(PS_DOT, 1, txtcolor);
             HPEN prevpen = (HPEN)SelectObject(hdc, dotpen);
@@ -2237,7 +2224,7 @@ static INT_PTR CALLBACK AdvancedPageDialogProc(HWND hwnd, UINT msg, WPARAM wPara
         LPNMHDR pnmh = (LPNMHDR) lParam;
         if (pnmh->code == PSN_SETACTIVE) {
             // Update text
-            static const struct dialogstring strlst[] = {
+            static const dialogstring_t strlst[] = {
                 { IDC_METRICS_BOX,      L10NIDX(AdvancedMetricsBox ) },
                 { IDC_CENTERFRACTION_H, L10NIDX(AdvancedCenterFraction ) },
                 { IDC_AEROHOFFSET_H,    L10NIDX(AdvancedAeroHoffset ) },
