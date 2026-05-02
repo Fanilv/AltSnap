@@ -5,7 +5,6 @@
  * the Free Software Foundation, either version 3 or later.              *
  * Modified By Raymond Gillibert in 2022                                 *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 #include "languages.h"
 
 static struct strings *l10n_ini = NULL;
@@ -125,13 +124,15 @@ static void LoadTranslation(const TCHAR *__restrict__ ini)
     LoadTranslationOrTT(ini, TEXT("ToolTips"),    1);
 }
 
-struct langinfoitem *langinfo = NULL;
-int nlanguages;
-
+struct langinfoitemList {
+    struct langinfoitem *it;
+    size_t num;
+    size_t cap;
+} langinfo = { NULL, 0, 0 };
 /////////////////////////////////////////////////////////////////////////////
 void ListAllTranslations()
 {
-    if (langinfo) return;
+    if (langinfo.it) return;
 
     HANDLE hFind = INVALID_HANDLE_VALUE;
     WIN32_FIND_DATA ffd;
@@ -139,14 +140,13 @@ void ListAllTranslations()
     LPCTSTR txt;
 
     // First element
-    langinfo = (struct langinfoitem *)malloc( sizeof(struct langinfoitem) );
-    if (!langinfo) return;
-    lstrcpy_s(langinfo[0].code, ARR_SZ(langinfo[0].code), en_US.Code);
-    langinfo[0].lang_english = en_US.LangEnglish;
-    langinfo[0].lang = en_US.Lang;
-    langinfo[0].author = en_US.Author;
-    langinfo[0].fn = NULL;
-    nlanguages = 1;
+    struct langinfoitem *lnfo = (struct langinfoitem *)ListAppend( &langinfo, NULL, sizeof(*lnfo) );
+    if (!lnfo) return;
+    lstrcpy_s(lnfo->code, ARR_SZ(lnfo->code), en_US.Code);
+    lnfo->lang_english = en_US.LangEnglish;
+    lnfo->lang = en_US.Lang;
+    lnfo->author = en_US.Author;
+    lnfo->fn = NULL;
 
     GetModuleFileName(NULL, szDir, ARR_SZ(szDir));
     PathRemoveFileSpecL(szDir);
@@ -159,11 +159,9 @@ void ListAllTranslations()
     if (hFind != INVALID_HANDLE_VALUE) {
         int n=1;
         do {
-            nlanguages++;
             lstrcpy(end, ffd.cFileName); // add filenale at the end of the path
-            struct langinfoitem *tmp = (struct langinfoitem *)realloc(langinfo, sizeof(*tmp) * nlanguages);
-            if (!tmp) break;
-            langinfo = tmp;
+            lnfo = (struct langinfoitem *)ListAppend( &langinfo, NULL, sizeof(*lnfo) );
+            if (!lnfo) break;
 
             // Preload section start
             TCHAR tsection[512];
@@ -172,22 +170,22 @@ void ListAllTranslations()
 
             // Short language code such as en-US, fr-FR, it-IT etc.
             txt = GetSectionOptionCStr(tsection, "Code", TEXT(""));
-            lstrcpy_s(langinfo[n].code, ARR_SZ(langinfo[n].code), txt);
+            lstrcpy_s(lnfo->code, ARR_SZ(lnfo->code), txt);
 
             // Language name in English
             txt = GetSectionOptionCStr(tsection, "LangEnglish", TEXT(""));
-            langinfo[n].lang_english = lstrdup(txt);
+            lnfo->lang_english = lstrdup(txt);
 
             // Language name in original language
             txt = GetSectionOptionCStr(tsection, "Lang", TEXT(""));
-            langinfo[n].lang = lstrdup(txt);
+            lnfo->lang = lstrdup(txt);
 
             // Author
             txt = GetSectionOptionCStr(tsection, "Author", TEXT(""));
-            langinfo[n].author = lstrdup(txt);
+            lnfo->author = lstrdup(txt);
 
             // Full file path
-            langinfo[n].fn = lstrdup(fpath);
+            lnfo->fn = lstrdup(fpath);
 
             n++;
         } while (FindNextFile(hFind, &ffd));
@@ -224,10 +222,9 @@ void UpdateLanguage()
     }
 
     ListAllTranslations();
-    int i;
-    for (i=0; i < nlanguages; i++) {
-        if (!lstrcmpi(txt, langinfo[i].code)) {
-            LoadTranslation(langinfo[i].fn);
+    for (size_t i=0; i < langinfo.num; i++) {
+        if (!lstrcmpi(txt, langinfo.it[i].code)) {
+            LoadTranslation(langinfo.it[i].fn);
             break;
         }
     }
@@ -235,16 +232,16 @@ void UpdateLanguage()
 
 void FreeAllLangRelated()
 {
-    if (langinfo) {
-        for (int i=1; i < nlanguages; i++) {
-            lstrfree(langinfo[i].lang_english);
-            lstrfree(langinfo[i].lang);
-            lstrfree(langinfo[i].author);
-            lstrfree(langinfo[i].fn);
+    if (langinfo.it) {
+        for (size_t i=1; i < langinfo.num; i++) {
+            lstrfree(langinfo.it[i].lang_english);
+            lstrfree(langinfo.it[i].lang);
+            lstrfree(langinfo.it[i].author);
+            lstrfree(langinfo.it[i].fn);
         }
-        free(langinfo);
-        langinfo = NULL;
-        nlanguages = 0;
+        ListFree(&langinfo);
+        langinfo.it = NULL;
+        langinfo.num = langinfo.cap = 0;
     }
 
     if (l10n_ini) {

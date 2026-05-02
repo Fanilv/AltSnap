@@ -562,10 +562,10 @@ static INT_PTR CALLBACK GeneralPageDialogProc(HWND hwnd, UINT msg, WPARAM wParam
         CB_ResetContent(control);
         EnableWindow(control, TRUE);
 
-        if (langinfo) {
-            for (int i = 0; i < nlanguages; i++) {
-                CB_AddString(control, langinfo[i].lang);
-                if ( !lstrcmpi(l10n->Code, langinfo[i].code) ) {
+        if (langinfo.it) {
+            for (size_t i = 0; i < langinfo.num; i++) {
+                CB_AddString(control, langinfo.it[i].lang);
+                if ( !lstrcmpi(l10n->Code, langinfo.it[i].code) ) {
                     CB_SetCurSel(control, i);
                 }
             }
@@ -628,8 +628,8 @@ static INT_PTR CALLBACK GeneralPageDialogProc(HWND hwnd, UINT msg, WPARAM wParam
 
             // Load selected Language
             int i = CB_GetCurSelId(IDC_LANGUAGE);
-            if (i < nlanguages && langinfo && lstrcmpi(l10n->Code, langinfo[i].code)) {
-                LoadTranslation(langinfo[i].fn);
+            if (langinfo.it && (size_t)i < langinfo.num && lstrcmpi(l10n->Code, langinfo.it[i].code)) {
+                LoadTranslation(langinfo.it[i].fn);
                 #ifdef UNICODE
                 wchar_t curlang[16];
                 GetCUserLanguage_xx_XX(curlang);
@@ -674,7 +674,7 @@ static INT_PTR CALLBACK GeneralPageDialogProc(HWND hwnd, UINT msg, WPARAM wParam
 
         // Language
         control = GetDlgItem(hwnd, IDC_LANGUAGE);
-        CB_DeleteString(control, nlanguages);
+        CB_DeleteString(control, langinfo.num);
     }
     return FALSE;
 }
@@ -1765,13 +1765,12 @@ static INT_PTR CALLBACK AboutPageDialogProc(HWND hwnd, UINT msg, WPARAM wParam, 
             SetDlgItemText(hwnd, IDC_TRANSLATIONS_BOX, l10n->AboutTranslationCredit);
 
             TCHAR txt[1024]; txt[0] = TEXT('\0');
-            int i;
-            if (langinfo) {
-                for (i = 0; i < nlanguages; i++) {
-                    lstrcat_s(txt, ARR_SZ(txt), langinfo[i].lang_english);
+            if (langinfo.it) {
+                for (size_t i = 0; i < langinfo.num; i++) {
+                    lstrcat_s(txt, ARR_SZ(txt), langinfo.it[i].lang_english);
                     lstrcat_s(txt, ARR_SZ(txt), TEXT(": "));
-                    lstrcat_s(txt, ARR_SZ(txt), langinfo[i].author);
-                    if (i + 1 != nlanguages) {
+                    lstrcat_s(txt, ARR_SZ(txt), langinfo.it[i].author);
+                    if (i + 1 != langinfo.num) {
                         lstrcat_s(txt, ARR_SZ(txt), TEXT("\r\n"));
                     }
                 }
