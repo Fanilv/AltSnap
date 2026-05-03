@@ -6157,8 +6157,8 @@ LRESULT CALLBACK HotKeysWinProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     } else if (msg == WM_GETZONES) {
         unsigned layout_idx = (unsigned)wParam;
         RECT **dZones = (RECT**)lParam;
-        if (dZones) *dZones = Zones[layout_idx];
-        return nzones[layout_idx]; // Return number of zones on the layout
+        if (dZones) *dZones = Zones[layout_idx].it;
+        return Zones[layout_idx].num; // Return number of zones on the layout
     }
 
     return DefWindowProc(hwnd, msg, wParam, lParam);
