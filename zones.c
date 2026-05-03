@@ -18,7 +18,6 @@ typedef struct RectList {
 } RECTs_t;
 
 static RECTs_t Zones[MAX_LAYOUTS] = { 0 };
-//static unsigned nzones[MAX_LAYOUTS];
 static DWORD Grids[MAX_LAYOUTS] = { 0 };
 
 enum { ZONES_PREV_HIDE=0, ZONES_PREV_SHOW=1 };
@@ -89,6 +88,7 @@ static void GenerateGridZones(unsigned layout, unsigned short Nx, unsigned short
         for (size_t i=0; i<Nx; i++) { // Horizontal
             for (size_t j=0; j<Ny; j++) { //Vertical
                 RECT *elem = (RECT *)ListAppend(&Zones[layout], NULL, sizeof(*elem));
+                if (!elem) return;
                 elem->left  = mon->left+(( i ) * (mon->right - mon->left))/Nx;
                 elem->top   = mon->top +(( j ) * (mon->bottom - mon->top))/Ny;
                 elem->right = mon->left+((i+1) * (mon->right - mon->left))/Nx;
@@ -559,24 +559,22 @@ static void ZonesPrevResetRegion()
     GetWindowRect(g_zphwnd, &wrc);
     ScreenToClient(g_zphwnd, &opt);
     HRGN hregion = CreateRectRgn(0,0,0,0);
-    if (Zones[conf.LayoutNumber].it) {
-        for (size_t i=0; i < Zones[conf.LayoutNumber].num; i++) {
-            RECT rc;
-            CopyRect(&rc, &Zones[conf.LayoutNumber].it[i]);
-            OffsetRect(&rc, opt.x, opt.y);
-            HRGN tmpr = CreateRectRgn(rc.left, rc.top, rc.right, rc.top+4); // top  ^^^^
-            CombineRgn(hregion, hregion, tmpr, RGN_OR);
-            DeleteObject(tmpr);
-            tmpr = CreateRectRgn(rc.left, rc.bottom-4, rc.right, rc.bottom); //     ____ bottom
-            CombineRgn(hregion, hregion, tmpr, RGN_OR);
-            DeleteObject(tmpr);
-            tmpr = CreateRectRgn(rc.left, rc.top, rc.left+4, rc.bottom); //   left  |...
-            CombineRgn(hregion, hregion, tmpr, RGN_OR);
-            DeleteObject(tmpr);
-            tmpr = CreateRectRgn(rc.right-4, rc.top, rc.right, rc.bottom); //       ...| right
-            CombineRgn(hregion, hregion, tmpr, RGN_OR);
-            DeleteObject(tmpr);
-        }
+    for (size_t i=0; i < Zones[conf.LayoutNumber].num; i++) {
+        RECT rc;
+        CopyRect(&rc, &Zones[conf.LayoutNumber].it[i]);
+        OffsetRect(&rc, opt.x, opt.y);
+        HRGN tmpr = CreateRectRgn(rc.left, rc.top, rc.right, rc.top+4); // top  ^^^^
+        CombineRgn(hregion, hregion, tmpr, RGN_OR);
+        DeleteObject(tmpr);
+        tmpr = CreateRectRgn(rc.left, rc.bottom-4, rc.right, rc.bottom); //     ____ bottom
+        CombineRgn(hregion, hregion, tmpr, RGN_OR);
+        DeleteObject(tmpr);
+        tmpr = CreateRectRgn(rc.left, rc.top, rc.left+4, rc.bottom); //   left  |...
+        CombineRgn(hregion, hregion, tmpr, RGN_OR);
+        DeleteObject(tmpr);
+        tmpr = CreateRectRgn(rc.right-4, rc.top, rc.right, rc.bottom); //       ...| right
+        CombineRgn(hregion, hregion, tmpr, RGN_OR);
+        DeleteObject(tmpr);
     }
     SetWindowRgn(g_zphwnd, hregion, FALSE);
 }
