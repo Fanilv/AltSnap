@@ -157,7 +157,6 @@ void ListAllTranslations()
     hFind = FindFirstFile(szDir, &ffd);
 
     if (hFind != INVALID_HANDLE_VALUE) {
-        int n=1;
         do {
             lstrcpy(end, ffd.cFileName); // add filenale at the end of the path
             lnfo = (struct langinfoitem *)ListAppend( &langinfo, NULL, sizeof(*lnfo) );
@@ -186,8 +185,6 @@ void ListAllTranslations()
 
             // Full file path
             lnfo->fn = lstrdup(fpath);
-
-            n++;
         } while (FindNextFile(hFind, &ffd));
 
         FindClose(hFind);
