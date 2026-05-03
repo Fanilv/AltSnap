@@ -11,21 +11,24 @@ static void ShowSnapLayoutPreview(unsigned char yep);
 enum { MAX_ZONES=2048, MAX_LAYOUTS=10 };
 #define INVALID_ZONE_IDX 0xffffffffU
 
-static RECT *Zones[MAX_LAYOUTS];
-static unsigned nzones[MAX_LAYOUTS];
-static DWORD Grids[MAX_LAYOUTS];
+typedef struct RectList {
+    RECT *it;
+    size_t num;
+    size_t cap;
+} RECTs_t;
+
+static RECTs_t Zones[MAX_LAYOUTS] = { 0 };
+static DWORD Grids[MAX_LAYOUTS] = { 0 };
 
 enum { ZONES_PREV_HIDE=0, ZONES_PREV_SHOW=1 };
 
 
 static void freezones()
 {
-    unsigned i;
-    for (i=0; i<ARR_SZ(Zones);i++)
-        free(Zones[i]);
+    for (size_t i = 0; i < ARR_SZ(Zones); i++)
+        ListFree(&Zones[i]);
 
     mem00(Zones, sizeof(Zones));
-    mem00(nzones, sizeof(nzones));
 }
 static int ReadRectFromini(RECT *zone, unsigned laynum, unsigned idx, const TCHAR *inisection)
 {
@@ -56,14 +59,10 @@ static int ReadRectFromini(RECT *zone, unsigned laynum, unsigned idx, const TCHA
 }
 static void ReadZonesFromLayout(const TCHAR *inisection, unsigned laynum)
 {
-    nzones[laynum] = 0;
-    Zones[laynum] = NULL;
+    mem00(&Zones[laynum], sizeof(Zones[laynum]));
     RECT tmpzone;
-    while (ReadRectFromini(&tmpzone, laynum, nzones[laynum], inisection)) {
-        RECT *tmp = (RECT *)realloc( Zones[laynum], (nzones[laynum]+1) * sizeof(*tmp) );
-        if(!tmp) return;
-        Zones[laynum] = tmp;
-        CopyRect(&Zones[laynum][nzones[laynum]++], &tmpzone);
+    while (ReadRectFromini(&tmpzone, laynum, Zones[laynum].num, inisection)) {
+        ListAppend(&Zones[laynum], &tmpzone, sizeof(tmpzone));
     }
 }
 // Load all zones from ini file
@@ -72,40 +71,31 @@ static void ReadZones(const TCHAR *inisection)
     for (size_t i=0; i<ARR_SZ(Zones); i++)
         ReadZonesFromLayout(inisection, i);
 }
-//static unsigned CopyZones(RECT *dZones, unsigned idx)
-//{
-//    RECT * const lZones = Zones[idx];
-//    unsigned i;
-//    for (i=0; i < nzones[idx]; ++i) {
-//        CopyRect(&dZones[i], &lZones[i]);
-//    }
-//    return i;
-//}
+
+
 // Generate a grid if asked
 static void GenerateGridZones(unsigned layout, unsigned short Nx, unsigned short Ny)
 {
     // Enumerate monitors
     monitors.num = 0;
-    unsigned nz = 0;
     EnumDisplayMonitors(NULL, NULL, EnumMonitorsProc, 0);
-    RECT *tmp = (RECT *)realloc(Zones[layout], monitors.num * Nx * Ny * sizeof(*tmp));
-    if(!tmp) return;
-    Zones[layout] = tmp;
+    Zones[layout].num = 0;
+    //ListSetCap(&Zones[layout], monitors.num * Nx * Ny, sizeof(*Zones[layout].it));
 
     // Loop on all monitors
     for (size_t m=0; m < monitors.num; m++) {
         const RECT *mon = &monitors.it[m];
         for (size_t i=0; i<Nx; i++) { // Horizontal
             for (size_t j=0; j<Ny; j++) { //Vertical
-                Zones[layout][nz].left  = mon->left+(( i ) * (mon->right - mon->left))/Nx;
-                Zones[layout][nz].top   = mon->top +(( j ) * (mon->bottom - mon->top))/Ny;
-                Zones[layout][nz].right = mon->left+((i+1) * (mon->right - mon->left))/Nx;
-                Zones[layout][nz].bottom= mon->top +((j+1) * (mon->bottom - mon->top))/Ny;
-                nz++;
+                RECT *elem = (RECT *)ListAppend(&Zones[layout], NULL, sizeof(*elem));
+                if (!elem) return;
+                elem->left  = mon->left+(( i ) * (mon->right - mon->left))/Nx;
+                elem->top   = mon->top +(( j ) * (mon->bottom - mon->top))/Ny;
+                elem->right = mon->left+((i+1) * (mon->right - mon->left))/Nx;
+                elem->bottom= mon->top +((j+1) * (mon->bottom - mon->top))/Ny;
             }
         }
     }
-    nzones[layout] = nz;
 }
 static void ReadGrids(const TCHAR *inisection)
 {
@@ -157,12 +147,12 @@ static xpure unsigned long ClacPtRectDist(const POINT pt, const RECT *zone)
 
 static unsigned GetNearestZoneDist(POINT pt, unsigned long *dist_)
 {
-    RECT * const lZones = Zones[conf.LayoutNumber];
+    RECT * const lZones = Zones[conf.LayoutNumber].it;
+    size_t numzones = Zones[conf.LayoutNumber].num;
     if(!lZones) return 0;
     unsigned long dist = 0xffffffff;
     unsigned idx = 0;
-    unsigned i;
-    for (i=0; i < nzones[conf.LayoutNumber]; i++) {
+    for (size_t i=0; i < numzones; i++) {
         unsigned long dst = ClacPtRectDist(pt, &lZones[i]);
         if ( dst < dist ) {
             dist = dst;
@@ -176,7 +166,8 @@ static unsigned GetNearestZoneDist(POINT pt, unsigned long *dist_)
 static unsigned GetZoneNearestFromPoint(POINT pt, RECT *urc, int extend)
 {
 
-    RECT * const lZones = Zones[conf.LayoutNumber];
+    RECT * const lZones = Zones[conf.LayoutNumber].it;
+    size_t numzones = Zones[conf.LayoutNumber].num;
     if(!lZones) return 0;
     unsigned i, ret=0;
     SetRectEmpty(urc);
@@ -189,7 +180,7 @@ static unsigned GetZoneNearestFromPoint(POINT pt, RECT *urc, int extend)
     if (!ret) return 0;
     CopyRect(urc, &lZones[i]);
     mindist += iz; // Add iz tolerance.
-    for (i=0; i < nzones[conf.LayoutNumber]; i++) {
+    for (i=0; i < numzones; i++) {
 
         BOOL inrect = mindist > ClacPtRectDist(pt, &lZones[i]);
         if ((state.ctrl||extend) && !inrect)
@@ -206,12 +197,13 @@ static unsigned GetZoneNearestFromPoint(POINT pt, RECT *urc, int extend)
 static unsigned GetZoneContainingPoint(POINT pt, RECT *urc, int extend)
 {
 
-    RECT * const lZones = Zones[conf.LayoutNumber];
+    RECT * const lZones = Zones[conf.LayoutNumber].it;
+    size_t numzones = Zones[conf.LayoutNumber].num;
     if(!lZones) return 0;
     unsigned i, ret=0;
     SetRectEmpty(urc);
     int iz = conf.InterZone;
-    for (i=0; i < nzones[conf.LayoutNumber]; i++) {
+    for (i=0; i < numzones; i++) {
         if (iz) InflateRect(&lZones[i], iz, iz);
 
         int inrect=0;
@@ -302,8 +294,8 @@ static xpure int IsPtInCone(POINT pt, POINT op, UCHAR direction)
 static unsigned GetNearestZoneFromPointInDirection(const RECT *rc, RECT *out, UCHAR direction)
 {
     unsigned idx = INVALID_ZONE_IDX;
-    RECT * const lZones = Zones[conf.LayoutNumber];
-    unsigned nZones = nzones[conf.LayoutNumber];
+    RECT * const lZones = Zones[conf.LayoutNumber].it;
+    size_t nZones = Zones[conf.LayoutNumber].num;
     if(!lZones) return 0;
 
     POINT opt = { (rc->left+rc->right)/2, (rc->top+rc->bottom)/2 };
@@ -414,8 +406,8 @@ static pure DWORD GetLayoutRez(int laynum)
         // In Grid mode we return the grid dimentions!
         return Grids[laynum];
     }
-    unsigned nz = nzones[laynum];
-    const RECT *zone = Zones[laynum];
+    size_t nz = Zones[laynum].num;
+    const RECT *zone = Zones[laynum].it;
     if (!zone || !nz) return 0;
     RECT urc;
     UnionMultiRect(&urc, zone, nz);
@@ -510,8 +502,8 @@ LRESULT CALLBACK SnapLayoutWinProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 //        HFONT oldfont = (HFONT)SelectObject(ps.hdc, font);
         // PaintDesktop(ps.hdc);
         HBRUSH oldBrush = (HBRUSH)SelectObject(ps.hdc, GetStockObject(HOLLOW_BRUSH));
-        for (size_t i=0; i < nzones[conf.LayoutNumber]; i++) {
-            RECT *rc = &Zones[conf.LayoutNumber][i];
+        for (size_t i=0; i < Zones[conf.LayoutNumber].num; i++) {
+            RECT *rc = &Zones[conf.LayoutNumber].it[i];
             if (!AreRectsTouchingT(rc, &ps.rcPaint, 0)) {
 //                TCHAR buf[16]; SIZE sz;
 //                const TCHAR *num = Int2lStr(buf, i);
@@ -567,24 +559,22 @@ static void ZonesPrevResetRegion()
     GetWindowRect(g_zphwnd, &wrc);
     ScreenToClient(g_zphwnd, &opt);
     HRGN hregion = CreateRectRgn(0,0,0,0);
-    if (Zones[conf.LayoutNumber]) {
-        for (size_t i=0; i < nzones[conf.LayoutNumber]; i++) {
-            RECT rc;
-            CopyRect(&rc, &Zones[conf.LayoutNumber][i]);
-            OffsetRect(&rc, opt.x, opt.y);
-            HRGN tmpr = CreateRectRgn(rc.left, rc.top, rc.right, rc.top+4); // top  ^^^^
-            CombineRgn(hregion, hregion, tmpr, RGN_OR);
-            DeleteObject(tmpr);
-            tmpr = CreateRectRgn(rc.left, rc.bottom-4, rc.right, rc.bottom); //     ____ bottom
-            CombineRgn(hregion, hregion, tmpr, RGN_OR);
-            DeleteObject(tmpr);
-            tmpr = CreateRectRgn(rc.left, rc.top, rc.left+4, rc.bottom); //   left  |...
-            CombineRgn(hregion, hregion, tmpr, RGN_OR);
-            DeleteObject(tmpr);
-            tmpr = CreateRectRgn(rc.right-4, rc.top, rc.right, rc.bottom); //       ...| right
-            CombineRgn(hregion, hregion, tmpr, RGN_OR);
-            DeleteObject(tmpr);
-        }
+    for (size_t i=0; i < Zones[conf.LayoutNumber].num; i++) {
+        RECT rc;
+        CopyRect(&rc, &Zones[conf.LayoutNumber].it[i]);
+        OffsetRect(&rc, opt.x, opt.y);
+        HRGN tmpr = CreateRectRgn(rc.left, rc.top, rc.right, rc.top+4); // top  ^^^^
+        CombineRgn(hregion, hregion, tmpr, RGN_OR);
+        DeleteObject(tmpr);
+        tmpr = CreateRectRgn(rc.left, rc.bottom-4, rc.right, rc.bottom); //     ____ bottom
+        CombineRgn(hregion, hregion, tmpr, RGN_OR);
+        DeleteObject(tmpr);
+        tmpr = CreateRectRgn(rc.left, rc.top, rc.left+4, rc.bottom); //   left  |...
+        CombineRgn(hregion, hregion, tmpr, RGN_OR);
+        DeleteObject(tmpr);
+        tmpr = CreateRectRgn(rc.right-4, rc.top, rc.right, rc.bottom); //       ...| right
+        CombineRgn(hregion, hregion, tmpr, RGN_OR);
+        DeleteObject(tmpr);
     }
     SetWindowRgn(g_zphwnd, hregion, FALSE);
 }
