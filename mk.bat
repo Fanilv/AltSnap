@@ -80,6 +80,9 @@
 @gcc -fipa-pta -fno-plt -Q --help=common >nul 2>nul
 @if %ERRORLEVEL% EQU 0    set EXTRA_CFLAGS=%EXTRA_CFLAGS% -fipa-pta -fno-plt
 
+@gcc -fgcse-las -Q --help=common >nul 2>nul
+@if %ERRORLEVEL% EQU 0    set EXTRA_CFLAGS=%EXTRA_CFLAGS% -fgcse-las
+
 @gcc -municode -Q --help=common >nul 2>nul
 @if %ERRORLEVEL% EQU 0    set EXTRA_CFLAGS=%EXTRA_CFLAGS% -municode
 ::

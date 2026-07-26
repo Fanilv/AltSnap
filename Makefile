@@ -92,7 +92,7 @@ WR_FLAGS=-Fpe-i386
 # end
 #####
 
-CFLAGS=-Os -std=c99 -ftrivial-auto-var-init=pattern \
+CFLAGS=-Os -std=c99 \
 	$(EXTRA_TARGET_CFLAGS) \
 	$(EXTRA_CFLAGS) \
 	-finput-charset=UTF-8 \
@@ -106,7 +106,6 @@ CFLAGS=-Os -std=c99 -ftrivial-auto-var-init=pattern \
 	-fno-asynchronous-unwind-tables \
 	-fmerge-all-constants \
 	-fgcse-sm \
-	-fgcse-las \
 	-DSTRICT \
 	-Wp,-D_FORTIFY_SOURCE=2 \
 	$(WARNINGS) \
