@@ -270,7 +270,7 @@ struct langinfoitem {
   LNGVALUE(z, TEXT("ž%źẑżẓẕ%ƶʒƹƺǯȥ|Ȥɀ|Ɀⱬ|Ⱬⓩ"), NULL)
 
 
-#define LNGVALUE(x, y, z) TCHAR *x, *x##_T_T_;
+#define LNGVALUE(x, y, z) const TCHAR *x, *x##_T_T_;
 // String structure definition TCHAR *translation, *tooltip;
 struct strings { LANGUAGE_MAP };
 #undef LNGVALUE
