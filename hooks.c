@@ -3204,10 +3204,10 @@ static short ScaleDeltaAndAccum(short delta, short tar_delta)
 static const CLSID my_CLSID_MMDeviceEnumerator= {0xBCDE0395,0xE52F,0x467C,{0x8E,0x3D,0xC4,0x57,0x92,0x91,0x69,0x2E}};
 static const GUID  my_IID_IMMDeviceEnumerator = {0xA95664D2,0x9614,0x4F35,{0xA7,0x46,0xDE,0x8D,0xB6,0x36,0x17,0xE6}};
 static const GUID  my_IID_IAudioEndpointVolume= {0x5CDF2C82,0x841E,0x4546,{0x97,0x22,0x0C,0xF7,0x40,0x78,0x22,0x9A}};
-#define _WIN32_WINNT 0x0600
+/*requires _WIN32_WINNT 0x0600 */
 #include <mmdeviceapi.h>
 #include <endpointvolume.h>
-#undef _WIN32_WINNT
+
 /* OLE32.DLL */
 static HRESULT (WINAPI *myCoInitialize)(LPVOID pvReserved);
 static VOID (WINAPI *myCoUninitialize)( );
