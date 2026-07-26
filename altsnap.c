@@ -83,7 +83,7 @@ static int HookSystem(void)
         // Get address to keyboard hook (beware name mangling)
         procaddr = (HOOKPROC) GetProcAddress(hinstDLL, LOW_LEVEL_KB_PROC);
         if (procaddr == NULL) {
-            LOG("Could not find "LOW_LEVEL_KB_PROC" entry point in HOOKS.DLL");
+            LOG("Could not find " LOW_LEVEL_KB_PROC " entry point in HOOKS.DLL");
             return 1;
         }
         // Set up the keyboard hook
@@ -167,7 +167,7 @@ void ShowSClickMenu(HWND hwnd, LPARAM param)
     HMENU menu = CreatePopupMenu();
     UCHAR show_oriclick = (param&LP_NOALTACTION)? AC_ORICLICK: 0xFF;
 
-    #define CHK(LP_FLAG) MF_STRING|((param&LP_FLAG)?MF_CHECKED:MF_UNCHECKED)
+    #define CHK(LP_FLAG) (WORD)( MF_STRING | ((param&LP_FLAG) ? MF_CHECKED : MF_UNCHECKED) )
 
     const struct {
         UCHAR action; WORD mf; const TCHAR *str;
@@ -639,6 +639,9 @@ static pure const TCHAR *ParamsFromCmdline(const TCHAR *cmdl)
 // Use -nostdlib and -e_unfuckMain@0 to use this main, -eunfuckMain for x64.
 #ifdef _MSC_VER
 #pragma comment(linker, "/entry:\"unfuckWinMain\"")
+#endif
+#ifdef __cplusplus
+extern "C"
 #endif
 void noreturn WINAPI unfuckWinMain(void)
 {
