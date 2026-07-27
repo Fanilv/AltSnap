@@ -4553,7 +4553,7 @@ static WORD Accel2Int(UCHAR c)
             return (WORD)i;
     return (WORD)0xFFFF;
 }
-#include <oleacc.h>
+/*#include <oleacc.h>*/
 struct menuitemdata {
     #ifdef _UNICODE
     MSAAMENUINFO msaa;

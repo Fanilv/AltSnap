@@ -266,32 +266,34 @@ typedef struct tagMSAAMENUINFO {
 /*#define LOGA(X, ...) {DWORD err=GetLastError(); FILE *LOG=fopen("ad.log", "a"); fprintf(LOG, X, ##__VA_ARGS__); fprintf(LOG,", LastError=%lu\n",err); fclose(LOG); SetLastError(0); }*/
 #define LOGA LOGfunk
 /* Cool warpper for wvsprintf */
-static void LOGfunk( const char *fmt, ... )
+static void LOGSimple(const char *str, size_t len)
 {
-    DWORD lerr = GetLastError();
-    va_list arglist;
-    char str[512];
+    DWORD dummy = 0;
     HANDLE h;
-
-    va_start( arglist, fmt );
-    wvsprintfA( str, fmt, arglist );
-    va_end( arglist );
-
     h = CreateFileA( "ad.log",
         FILE_APPEND_DATA, FILE_SHARE_READ, NULL, OPEN_ALWAYS,
         FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
     if( h == INVALID_HANDLE_VALUE )
         return;
-    {
-    char lerrorstr[16];
-    DWORD dummy;
+    WriteFile( h, str, len, &dummy, NULL );
+    CloseHandle(h);
+    SetLastError(0);
+}
+static void LOGfunk( const char *fmt, ... )
+{
+    va_list arglist;
+    DWORD lerr = GetLastError();
+    char str[512], lerrorstr[16];
+
+    va_start( arglist, fmt );
+    wvsprintfA( str, fmt, arglist );
+    va_end( arglist );
+
     lstrcat_sA(str, ARR_SZ(str), " (");
     lstrcat_sA(str, ARR_SZ(str), itostrA(lerr, lerrorstr, 10));
     lstrcat_sA(str, ARR_SZ(str), ")\n");
-    WriteFile( h, str, lstrlenA(str), &dummy, NULL );
-    CloseHandle(h);
-    SetLastError(0);
-    }
+    LOGSimple(str, lstrlenA(str));
+
 }
 #ifdef LOG_STUFF
 #define LOG LOGfunk

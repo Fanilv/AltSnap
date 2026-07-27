@@ -596,7 +596,7 @@ int WINAPI tWinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, TCHAR *params, int
         PostMessage(g_hwnd, WM_OPENCONFIG, 0, 0);
     }
     // Message loop
-    LOG("Starting "APP_NAMEA" message loop...");
+    LOG("Starting " APP_NAMEA " message loop...");
     BOOL ret;
     MSG msg;
     while ((ret = GetMessage( &msg, NULL, 0, 0 )) != 0) {
